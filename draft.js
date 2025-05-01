@@ -1,14 +1,14 @@
-let backgroundType = 'grid'; // 'grid', 'gradient', 'perlin', 'dither'
+let backgroundType = 'perlin'; // 'grid', 'gradient', 'perlin', 'dither', 'flash', 'scrollingText'
 
 let settings = {
-  color0: [50, 0, 50],         // Background color
-  color1: [255, 0, 255],   // Foreground / dot color
-  dotGap: 5,
-  lineWeight: 1,
+  color0: [255, 255, 255],         // Background color
+  color1: [0, 0, 0],       // Foreground / dot color
+  dotGap: 50,
+  lineWeight: 5,
   xScale: 0.015,
   yScale: 0.02,
-  animationSpeed: 2,         // Dither animation speed
-  resolution: 3              // Dither pixel block size
+  animationSpeed:2,           // Animation speed (also used by flash)
+  resolution: 3                // Dither pixel block size
 };
 
 let offset = 0;
@@ -25,7 +25,7 @@ function setup() {
 }
 
 function draw() {
-  offset += settings.animationSpeed/1000;
+  offset += settings.animationSpeed / 1000;
   applyBackground(backgroundType);
 }
 
@@ -38,6 +38,10 @@ function applyBackground(type) {
     drawPerlinDotGrid();
   } else if (type === 'dither') {
     drawDitheredBackground();
+  } else if (type === 'flash') {
+    drawFlashingBackground();
+  } else if (type === 'scrollingText') {
+    drawScrollingTextBackground();
   }
 }
 
@@ -46,15 +50,13 @@ function drawGridBackground() {
   stroke(settings.color1);
   strokeWeight(settings.lineWeight);
   noFill();
-  frameRate(settings.animationSpeed*10)
+  frameRate(settings.animationSpeed * 10);
 
-  let t = settings.animationSpeed; // Time multiplier for glitching effect
+  let t = settings.animationSpeed;
 
-  // Horizontal lines with random glitch
   for (let y = 0; y < height; y += settings.dotGap) {
     beginShape();
     for (let x = 0; x <= width; x += settings.dotGap) {
-      // Apply a random "jitter" offset
       let randomOffset = random(-settings.dotGap * 0.5, settings.dotGap * 0.5);
       let yOffset = sin(t + x * 0.05) * randomOffset;
       vertex(x, y + yOffset);
@@ -62,11 +64,9 @@ function drawGridBackground() {
     endShape();
   }
 
-  // Vertical lines with random glitch
   for (let x = 0; x < width; x += settings.dotGap) {
     beginShape();
     for (let y = 0; y <= height; y += settings.dotGap) {
-      // Apply a random "jitter" offset to the vertical line
       let randomOffset = random(-settings.dotGap * 0.5, settings.dotGap * 0.5);
       let xOffset = cos(t + y * 0.05) * randomOffset;
       vertex(x + xOffset, y);
@@ -74,8 +74,6 @@ function drawGridBackground() {
     endShape();
   }
 }
-
-
 
 function drawGradientBackground() {
   let maxDist = dist(0, 0, width / 2, height / 2);
@@ -95,7 +93,7 @@ function drawPerlinDotGrid() {
   for (let x = settings.dotGap / 2; x < width; x += settings.dotGap) {
     for (let y = settings.dotGap / 2; y < height; y += settings.dotGap) {
       let noiseVal = noise((x + offset * 1000) * settings.xScale,
-                           (y + offset * 1000) * settings.yScale);
+        (y + offset * 1000) * settings.yScale);
       let size = noiseVal * settings.dotGap;
       rectMode(CENTER);
       rect(x, y, size, size);
@@ -116,7 +114,6 @@ function drawDitheredBackground() {
 
   randomSeed(frameSeed);
 
-  // Step 1: Random grayscale values
   for (let y = 0; y < rows; y++) {
     data[y] = [];
     for (let x = 0; x < cols; x++) {
@@ -124,7 +121,6 @@ function drawDitheredBackground() {
     }
   }
 
-  // Step 2: Floyd–Steinberg Dithering
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       let old = data[y][x];
@@ -139,7 +135,6 @@ function drawDitheredBackground() {
     }
   }
 
-  // Step 3: Render image
   ditherImg.loadPixels();
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
@@ -164,4 +159,47 @@ function drawDitheredBackground() {
   ditherImg.updatePixels();
   image(ditherImg, 0, 0);
   frameSeed += settings.animationSpeed;
+}
+
+function drawFlashingBackground() {
+  let speed = settings.animationSpeed;
+  if (speed <= 0) {
+    background(settings.color0);
+    return;
+  }
+
+  let t = millis() / 50 * speed;
+  let inter = (sin(t * TWO_PI) + 1) / 2; // 0 → 1 smoothly
+  let c = lerpColor(color(settings.color0), color(settings.color1), inter);
+  background(c);
+}
+
+function drawScrollingTextBackground() {
+  background(settings.color0);
+
+  fill(settings.color1);
+  textFont('monospace');
+
+  let fontSize = settings.dotGap;        // Control font size via dotGap
+  let rowHeight = fontSize * 1.1;        // Slight padding between rows
+
+  textSize(fontSize);
+  textAlign(LEFT, TOP);
+
+  let phrase = "0xE0c407dD52aCb19249B2D80A6D46C10B308D896C ";
+  let baseSpeed = settings.animationSpeed * 200;
+
+  for (let y = 0; y < height; y += rowHeight) {
+    let rowIndex = y / rowHeight;
+    let speedOffset = sin(offset * 100 + rowIndex * 10) * 0.5;
+    let rowSpeed = baseSpeed + speedOffset * baseSpeed;
+
+    let phraseWidth = textWidth(phrase);
+    let repeatCount = ceil(width / phraseWidth) + 2;
+    let fullText = phrase.repeat(repeatCount);
+
+    let xOffset = (millis() / 1000 * rowSpeed + rowIndex * 100) % phraseWidth;
+
+    text(fullText, -xOffset, y);
+  }
 }
