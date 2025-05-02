@@ -1,13 +1,13 @@
-let backgroundType = 'perlin'; // 'grid', 'gradient', 'perlin', 'dither', 'flash', 'scrollingText'
+let backgroundType = 'grid'; // 'grid', 'gradient', 'perlin', 'dither', 'flash', 'scrollingText'
 
 let settings = {
   color0: [255, 255, 255],         // Background color
   color1: [0, 0, 0],       // Foreground / dot color
-  dotGap: 50,
-  lineWeight: 5,
+  dotGap: 15,
+  lineWeight: 2,
   xScale: 0.015,
   yScale: 0.02,
-  animationSpeed:2,           // Animation speed (also used by flash)
+  animationSpeed: 0,           // Animation speed (also used by flash)
   resolution: 3                // Dither pixel block size
 };
 
@@ -158,7 +158,7 @@ function drawDitheredBackground() {
 
   ditherImg.updatePixels();
   image(ditherImg, 0, 0);
-  frameSeed += settings.animationSpeed;
+  frameSeed += settings.animationSpeed / 10;
 }
 
 function drawFlashingBackground() {
@@ -186,7 +186,7 @@ function drawScrollingTextBackground() {
   textSize(fontSize);
   textAlign(LEFT, TOP);
 
-  let phrase = "0xE0c407dD52aCb19249B2D80A6D46C10B308D896C ";
+  let phrase = "0xE0c407dD52aCb19249B2D80A6D46C10B308D896C";
   let baseSpeed = settings.animationSpeed * 200;
 
   for (let y = 0; y < height; y += rowHeight) {
