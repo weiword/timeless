@@ -4,8 +4,7 @@ Time Left
 Year (x)
 Month (x)
 Week of Year
-Day of Year
-Day of Week 
+Day of Month
 AM/PM
 Date
 Block
