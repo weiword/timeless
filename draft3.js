@@ -1,13 +1,13 @@
 let backgroundType = 'background';
 let dialType = 'digital';
-
 let settings = {
   c0: [0, 0, 0],               
   c1: [255, 255, 255],         
-  type: 'beat',                
+  type: 'date',   
   fontSize: 64,
-  targetTime: 8,
+  targetTime: 52,
 };
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   textAlign(CENTER, CENTER);
@@ -32,11 +32,12 @@ function applyDial(type) {
 
 function drawDigital() {
   fill(...settings.c1);
+  let output1 = getDisplayText(settings.type).value;
+  let output2 = getDisplayText(settings.type).label;
   textSize(settings.fontSize);
-
-  let output1 = getDisplayText(settings.type);
   text(output1, width / 2, height / 2 - settings.fontSize * 0.6);
-
+  textSize(settings.fontSize * 0.5); 
+  text(output2, width / 2, height / 2 + settings.fontSize * 0.05);
 }
 
 function getDisplayText(type) {
@@ -52,24 +53,23 @@ function getDisplayText(type) {
   let currentDay = days[now.getDay()];
   let currentMonth = months[now.getMonth()];
   let dateStr = `${currentMonth} ${day()}, ${year()}`;
-  let timeStr = `${h}:${m}:${s}`;
+  let military = `${h}:${m}:${s}`;
+  let standard = `${h}:${m}`;
 
   switch (type) {
-    case 'timeLeft': return getTimeLeft();
-    case 'beat': return getBeatTime();
-    case 'year': return now.getFullYear();
-    case 'month': return month();
-    case 'week': return `${getWeekNumber(now)}`;
-    case 'day': return currentDay;
-    case 'unix': return Math.floor(now.getTime() / 1000);
-    case 'military': return timeStr;
-    case 'date': return dateStr;
-    case 'hour': return hour(); 
-    case 'minute': return minute();
-    case 'second': return second();
-    case 'ampm': return get12HourTime();
-    case 'tai': return getTAI();
-    
+    case 'timeLeft': return { label: 'days', value: getTimeLeft() }; 
+    case 'beat': return { label: 'beat', value: getBeatTime() };
+    case 'year': return { label: 'A.D.', value: now.getFullYear() };
+    case 'month': return { label: '12', value: month() };
+    case 'week': return { label: '52', value: `${getWeekNumber(now)}`};
+    case 'day': return { label: '365', value: day()}; 
+    case 'unix': return { label: '', value: Math.floor(now.getTime() / 1000)};
+    case 'military': return { label: '', value: military}; 
+    case 'date': return { label: '', value: dateStr};
+    case 'standard': return { label: '', value: standard};  
+    case 'hour': return { label: '24', value: hour()}; 
+    case 'minute': return { label: '60', value: minute()}; 
+    case 'second': return { label: '60', value: second()}; 
     default: return 'W31w0rd';
   }
 }
@@ -87,44 +87,15 @@ function getBeatTime() {
   let bmtSeconds = now.getUTCSeconds();
   let totalSeconds = bmtHours * 3600 + bmtMinutes * 60 + bmtSeconds;
   let beats = totalSeconds / 86.4;
-  return `@${nf(floor(beats), 3)}`;
+  return `${nf(floor(beats), 3)}`;
 }
 
-function get12HourTime() {
-  let now = new Date();
-  let hours = now.getHours();
-  let minutes = nf(now.getMinutes(), 2);
-  let seconds = nf(now.getSeconds(), 2);
-
-  let period = hours >= 12 ? '1' : '0';
-  hours = hours % 12;
-  if (hours === 0) hours = 12; 
-  return `${period}`;
-}
 function getTimeLeft() {
   let now = new Date();
   let diffMs = settings.targetTime - now;
 
   if (diffMs <= 0) return "Time's up!";
 
-  let seconds = floor(diffMs / 1000) % 60;
-  let minutes = floor(diffMs / (1000 * 60)) % 60;
-  let hours = floor(diffMs / (1000 * 60 * 60)) % 24;
-  let days = floor(diffMs / (1000 * 60 * 60 * 24)) % 365;
-  let years = floor(diffMs / (1000 * 60 * 60 * 24 * 365));
-
-  return `${years}y ${days}d ${seconds}s`;
-}
-
-function getTAI() {
-  // Get the current UTC time in milliseconds
-  let now = new Date();
-  let utcTime = now.getTime();
-
-  // Add leap seconds to approximate TAI
-  let taiTime = utcTime + (leapSeconds * 1000);  // Add leap seconds (converted to milliseconds)
-
-  // Convert TAI to a human-readable format
-  let taiDate = new Date(taiTime);
-  return taiDate.toISOString();  // TAI approximated as UTC for display
+  let days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  return `${days}`;
 }
