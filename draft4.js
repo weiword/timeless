@@ -1,93 +1,118 @@
 let config = {
-  symbols: ['░', '▒'],  // Symbols to alternate between
-  raysCount: 99,
-  maxLength: 800,
-  step: 75,
-  baseFontSize: 99,
+  symbols: ['|'],
+  raysCount: 45,
+  maxIterations: 50,
+  dialSpacing: 35,
+  step: 25,
+  baseFontSize: 199,
+  dialFontSize: 199,
+  dialBorder: 5,
   font: 'sans-serif',
-  waveSpeed: 0.00,
-  spinSpeed: 0, // rotation speed in radians per frame (set 0 to disable)
-  ringPulseSpeed: 0.1, // NEW: speed of ripple pulsing
-  c0: [255, 255, 255],    // background (blue)
-  c1: [0, 0, 0],    // fill (red)
+  pulseSpeed: 0.05,
+  c0: [255, 0, 0],   
+  c1: [0, 255, 255],         
+  c2: [255, 255, 255],   
+  c3: [255, 255, 255],   
+  animationMode: 'pulse',
+  dialSymbols: ['◍','◍','◍','◍','◍','◍','◍','◍','◍','◍','◍','◍']
 };
 
-let wavePhase = 0;
-let pulsePhase = 0; // NEW: for ring pulse animation
-let symbolStates = [];
+let animationPhase = 0;
+let glyphGraphic;
+let cosVals = [], sinVals = [];
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
+  frameRate(45);
   textAlign(CENTER, CENTER);
   textFont(config.font);
-  fill(config.c1);
+  noStroke();
 
   for (let i = 0; i < config.raysCount; i++) {
-    symbolStates[i] = [];
-    for (let d = config.step; d <= config.maxLength; d += config.step) {
-      symbolStates[i].push({
-        currentSymbolIndex: 0,
-        lastOffset: 0,
-        rotation: 0
-      });
-    }
+    let angle = TWO_PI * i / config.raysCount;
+    cosVals[i] = cos(angle);
+    sinVals[i] = sin(angle);
   }
+
+  glyphGraphic = createGraphics(200, 200);
+  glyphGraphic.textAlign(CENTER, CENTER);
+  glyphGraphic.textFont(config.font);
+  glyphGraphic.noStroke();
+  glyphGraphic.textSize(config.baseFontSize);
+  glyphGraphic.fill(0);
+  glyphGraphic.text(config.symbols[0], glyphGraphic.width / 2, glyphGraphic.height / 2);
 }
 
 function draw() {
   background(config.c0);
   translate(width / 2, height / 2);
 
-  if (config.waveSpeed !== 0) {
-    wavePhase += config.waveSpeed;
-  }
-  if (config.ringPulseSpeed !== 0) {
-    pulsePhase += config.ringPulseSpeed;
-  }
+  animationPhase += config.pulseSpeed;
 
   for (let i = 0; i < config.raysCount; i++) {
-    let angle = TWO_PI * i / config.raysCount;
+    let cosI = cosVals[i];
+    let sinI = sinVals[i];
 
-    for (let j = 0, dist = config.step; dist <= config.maxLength; dist += config.step, j++) {
-      let offset = 0;
-      let state = symbolStates[i][j];
+    for (let j = 0; j < config.maxIterations; j++) {
+      let dist = (j + 1) * config.step;
 
-      if (config.waveSpeed !== 0) {
-        offset = 15 * sin(wavePhase + dist * 0.1 + i * 0.5);
-        if ((offset > 0 && state.lastOffset < 0) || (offset < 0 && state.lastOffset > 0)) {
-          state.currentSymbolIndex = 1 - state.currentSymbolIndex;
-        }
-        state.lastOffset = offset;
-      } else {
-        state.lastOffset = 0;
+      let scaleFactor = 1;
+      if (config.animationMode === 'pulse') {
+        scaleFactor = 1 + 0.5 * sin(animationPhase + j * 0.5);
+        scaleFactor = constrain(scaleFactor, 0.5, 2);
+        if (scaleFactor * config.baseFontSize < 10) continue;
       }
 
-      let x = cos(angle) * (dist + offset);
-      let y = sin(angle) * (dist + offset);
-
-      // Rotation
-      if (config.spinSpeed !== 0) {
+      let rotationAngle = 0;
+      if (config.animationMode === 'rotate') {
         let direction = (j % 2 === 0) ? 1 : -1;
-        state.rotation += direction * config.spinSpeed;
-      } else {
-        state.rotation = 0;
+        let falloff = 1 / (1 + j * 0.2);
+        rotationAngle = animationPhase * direction * falloff;
       }
 
-      // NEW: Pulsing text size per ring
-      let pulseOffset = pulsePhase + j * 0.5; // offset each ring
-      let pulse = 1 + 0.5 * sin(pulseOffset);  // ranges from 0.5 to 1.5
-      pulse = constrain(pulse, 0.5, 2);        // cap it between 0.5x and 2x
+      fill(j % 2 === 0 ? config.c1 : 100); // alternate colors for glyphs
 
       push();
-      translate(x, y);
-      rotate(state.rotation);
-      textSize(config.baseFontSize * pulse); // Apply animated size
-      text(config.symbols[state.currentSymbolIndex], 0, 0);
+      translate(cosI * dist, sinI * dist);
+      if (config.animationMode === 'rotate') rotate(rotationAngle);
+      if (config.animationMode === 'pulse') scale(scaleFactor);
+      imageMode(CENTER);
+      image(glyphGraphic, 0, 0);
       pop();
     }
+  }
+
+  // Draw white circle with border
+  let dialRadius = 15 * config.dialSpacing * 0.65;
+  let circleRadius = dialRadius * 1.2;
+  stroke(config.c3);
+  strokeWeight(config.dialBorder); // Adjust border thickness
+  fill(0, 0, 0, 150);  // white with opacity
+  ellipse(0, 0, circleRadius * 2, circleRadius * 2);
+
+  drawWatchDial();
+}
+
+function drawWatchDial() {
+  let dialRadius = 15 * config.dialSpacing * 0.65;
+  textSize(config.dialFontSize * 0.5);
+  noStroke();
+  fill(config.c2);
+
+  for (let i = 0; i < 12; i++) {
+    let angle = -HALF_PI + TWO_PI * i / 12;
+    let x = cos(angle) * dialRadius;
+    let y = sin(angle) * dialRadius;
+
+    push();
+    translate(x, y);
+    rotate(angle + HALF_PI);  // Rotate so bottom faces center
+    text(config.dialSymbols[i], 0, 0);
+    pop();
   }
 }
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
 }
+
